@@ -65,6 +65,7 @@ function unwrapResponse<T>(response: { data: ApiResponse<T> | T }): T {
 }
 
 // Transform API profile response to match Profile interface
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformProfile(apiProfile: any): Profile {
   if (!apiProfile) {
     // Return a default empty profile if null/undefined
@@ -80,23 +81,78 @@ function transformProfile(apiProfile: any): Profile {
     }
   }
 
-  return {
+  // Debug: Log the raw API response to understand its structure
+  console.log('[transformProfile] Raw API response:', apiProfile)
+
+  // Check if stats are nested in a 'stats' object
+  const stats = apiProfile.stats || {}
+  
+  // Extract stats from various possible locations
+  const postsCount = 
+    apiProfile.postsCount ?? 
+    apiProfile.postCount ?? 
+    apiProfile.posts_count ?? 
+    stats.postsCount ?? 
+    stats.postCount ?? 
+    stats.posts_count ?? 
+    stats.posts ?? 
+    0
+
+  const followersCount = 
+    apiProfile.followersCount ?? 
+    apiProfile.followerCount ?? 
+    apiProfile.followers_count ?? 
+    stats.followersCount ?? 
+    stats.followerCount ?? 
+    stats.followers_count ?? 
+    stats.followers ?? 
+    0
+
+  const followingCount = 
+    apiProfile.followingCount ?? 
+    apiProfile.following_count ?? 
+    stats.followingCount ?? 
+    stats.following_count ?? 
+    stats.following ?? 
+    0
+
+  const likesCount = 
+    apiProfile.likesCount ?? 
+    apiProfile.likeCount ?? 
+    apiProfile.likes_count ?? 
+    stats.likesCount ?? 
+    stats.likeCount ?? 
+    stats.likes_count ?? 
+    stats.likes ?? 
+    0
+
+  const transformed = {
     ...apiProfile,
     id: apiProfile.id,
     name: apiProfile.name,
     username: apiProfile.username,
     email: apiProfile.email,
     avatar: apiProfile.avatarUrl || apiProfile.avatar,
-    // Handle different casing/naming conventions for stats
-    postsCount: apiProfile.postsCount ?? apiProfile.postCount ?? apiProfile.posts_count ?? 0,
-    followersCount: apiProfile.followersCount ?? apiProfile.followerCount ?? apiProfile.followers_count ?? 0,
-    followingCount: apiProfile.followingCount ?? apiProfile.following_count ?? 0,
-    likesCount: apiProfile.likesCount ?? apiProfile.likeCount ?? apiProfile.likes_count ?? 0,
+    // Use extracted stats - ensure they are numbers
+    postsCount: typeof postsCount === 'number' ? postsCount : Number(postsCount) || 0,
+    followersCount: typeof followersCount === 'number' ? followersCount : Number(followersCount) || 0,
+    followingCount: typeof followingCount === 'number' ? followingCount : Number(followingCount) || 0,
+    likesCount: typeof likesCount === 'number' ? likesCount : Number(likesCount) || 0,
     // Ensure booleans
     isFollowedByMe: !!(apiProfile.isFollowedByMe ?? apiProfile.is_followed_by_me),
     isMe: !!(apiProfile.isMe ?? apiProfile.is_me),
     followsMe: !!(apiProfile.followsMe ?? apiProfile.follows_me),
   }
+
+  console.log('[transformProfile] Transformed profile stats:', {
+    postsCount: transformed.postsCount,
+    followersCount: transformed.followersCount,
+    followingCount: transformed.followingCount,
+    likesCount: transformed.likesCount,
+  })
+
+  console.log('[transformProfile] Transformed profile:', transformed)
+  return transformed
 }
 
 // Transform API post response to match Post interface
