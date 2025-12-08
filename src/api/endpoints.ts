@@ -81,9 +81,6 @@ function transformProfile(apiProfile: any): Profile {
     }
   }
 
-  // Debug: Log the raw API response to understand its structure
-  console.log('[transformProfile] Raw API response:', apiProfile)
-
   // Check if stats are nested in a 'stats' object
   const stats = apiProfile.stats || {}
   
@@ -144,14 +141,6 @@ function transformProfile(apiProfile: any): Profile {
     followsMe: !!(apiProfile.followsMe ?? apiProfile.follows_me),
   }
 
-  console.log('[transformProfile] Transformed profile stats:', {
-    postsCount: transformed.postsCount,
-    followersCount: transformed.followersCount,
-    followingCount: transformed.followingCount,
-    likesCount: transformed.likesCount,
-  })
-
-  console.log('[transformProfile] Transformed profile:', transformed)
   return transformed
 }
 

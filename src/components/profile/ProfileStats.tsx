@@ -8,15 +8,6 @@ interface ProfileStatsProps {
 }
 
 export function ProfileStats({ profile, variant = 'mobile', className = '' }: ProfileStatsProps) {
-  // Debug: Log what we're receiving
-  console.log('[ProfileStats] Profile data:', {
-    postsCount: profile.postsCount,
-    followersCount: profile.followersCount,
-    followingCount: profile.followingCount,
-    likesCount: profile.likesCount,
-    fullProfile: profile,
-  })
-
   const stats = [
     { label: 'posts', value: profile.postsCount ?? 0, to: null },
     { label: 'followers', value: profile.followersCount ?? 0, to: '/me/followers' },
