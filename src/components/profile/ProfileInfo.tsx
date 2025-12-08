@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Send, Settings } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import type { Profile } from '@/types'
 import { ProfileStats } from './ProfileStats'
 
@@ -11,7 +11,7 @@ export function ProfileInfo({ profile }: ProfileInfoProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-start md:gap-12 mb-6 md:mb-12">
       {/* Avatar Section */}
-      <div className="flex-shrink-0 mx-auto md:mx-0 mb-4 md:mb-0">
+      <div className="shrink-0 mx-auto md:mx-0 mb-4 md:mb-0">
         <div className="p-1 rounded-full border-2 border-neutral-800">
           <img
             src={profile.avatar || '/default-avatar.png'}
