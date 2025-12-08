@@ -1,0 +1,713 @@
+---
+alwaysApply: true
+---
+
+# Sociality Development Guides
+
+This document contains all development guidelines, design system rules, API specifications, and animation requirements for the Sociality web application.
+
+## Tech Stack
+
+- **React 19** (client only, Vite)
+- **Tailwind CSS 4.1**
+- **shadcn/ui**
+- **React Router v7**
+- **React Query** (all server state)
+- **React Context API** (auth + UI/global)
+- **Zod + React Hook Form**
+- **Framer Motion** (animations)
+- **File-by-file generation** (Cursor MCP best practices)
+
+## Design System — Colors
+
+Use this exact color palette everywhere:
+
+### Neutral Scale
+- `neutral-25`: `#FDFDFD`
+- `neutral-50`: `#FAFAFA`
+- `neutral-100`: `#F5F5F5`
+- `neutral-200`: `#E9EAEB`
+- `neutral-300`: `#D0D7DA`
+- `neutral-400`: `#A4A7AE`
+- `neutral-500`: `#797E89`
+- `neutral-600`: `#555B62`
+- `neutral-700`: `#414661`
+- `neutral-800`: `#252B37`
+- `neutral-900`: `#191D27`
+- `neutral-950`: `#0A0D12`
+
+### Primary
+- `primary-100`: `#F0F6FE`
+- `primary-200`: `#7F51F9`
+- `primary-300`: `#9639F2`
+
+### Accent
+- `accent-red`: `#D9204E`
+- `accent-green`: `#07A655`
+- `accent-yellow`: `#F7D022`
+
+### Base
+- `white`: `#FFFFFF`
+- `black`: `#000000`
+
+**Tailwind must contain these as tokens.** Buttons, icons, inputs, cards, modals MUST use these colors.
+
+## Design System — Component Rules
+
+### Visual Design (from Figma PDF)
+
+- **Glass-card surfaces**: `bg-neutral-900/60`, `border-neutral-800`, `rounded-card`, `shadow-card`
+- **Inputs**: `bg-neutral-900`, `border-neutral-700`, `rounded-input`, `focus:ring-primary-200`
+- **Error text**: `text-accent-red`
+- **Primary buttons**: `bg-primary-200` → `hover:bg-primary-300`, `text-white`, `rounded-pill`
+- **PostCard layout**: avatar → name → timestamp → image → reaction row → caption → "Show more"
+- **Bottom nav (mobile)**: Home, Add Post (floating purple), Profile
+- **Modals** (likes drawer, comments, post detail): backdrop `bg-black/70` + `backdrop-blur-md`
+- **Profile page elements**: stats grid, gallery tab, saved tab, liked tab
+- **Empty states**: centered illustrations + soft text
+- **Upload dropzone**: `border-dashed border-neutral-600`, `text-neutral-400`
+- **Edit profile form**: avatar upload circle, labeled fields, save button
+
+### Spacing
+- `24px` vertical rhythm on auth screens
+- `16px` spacing between inputs and labels
+- `32px` spacing before CTAs
+- Post card vertical padding: `24px`
+- Comments modal: `16px` spacing between items
+
+### Radii
+- **Card**: `12px`
+- **Input**: `10px`
+- **Pill**: `999px` (for buttons)
+
+### Shadows
+- **Card shadow**: `0 4px 24px rgba(0,0,0,0.25)`
+- **CTA glow**: `0 0 20px rgba(150,57,242,0.45)`
+
+## Animation System — Framer Motion
+
+Use Framer Motion for all interactive, transitional, and modal UI. Animations must match the feel of the Sociality Figma PDF:
+- Smooth
+- Soft
+- Slight easing
+- Subtle but intentional
+
+### Global Animation Guidelines
+
+Use these base transition settings:
+
+```typescript
+const softTransition = {
+  type: "spring",
+  stiffness: 240,
+  damping: 26,
+  mass: 0.9
+};
+
+const fadeTransition = {
+  duration: 0.3,
+  ease: "easeOut"
+};
+
+const modalTransition = {
+  type: "spring",
+  stiffness: 260,
+  damping: 28
+};
+```
+
+### Page Transitions (React Router v7)
+
+Every page must use these motion variants:
+
+```typescript
+pageVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: fadeTransition },
+  exit: { opacity: 0, y: -12, transition: fadeTransition }
+}
+```
+
+Apply to: Login, Register, Feed, Profile pages, Search, Post detail (not modal), Edit profile, Add post
+
+### Post Card Entrance Animation (Feed)
+
+Each PostCard should:
+- Fade upward
+- Slight scale-in (1%–2%)
+- Stagger by index
+
+```typescript
+postCardVariants = {
+  initial: { opacity: 0, y: 20, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: softTransition }
+};
+
+feedStagger = {
+  animate: {
+    transition: { staggerChildren: 0.08, delayChildren: 0.05 }
+  }
+};
+```
+
+### Navigation Animations
+
+**BottomNav:**
+- Slide-up on mount: `y: 60 → 0`
+- Fade-in
+
+**FloatingCreateButton:**
+- Scale from 0.8 to 1 with spring
+- Hover: scale 1.05
+- Press: scale 0.92
+
+### Modal Animations
+
+**Center Modal Animation (Post Detail):**
+
+```typescript
+overlayVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: fadeTransition },
+  exit: { opacity: 0, transition: fadeTransition }
+};
+
+modalVariants = {
+  initial: { opacity: 0, scale: 0.96, y: 10 },
+  animate: { opacity: 1, scale: 1, y: 0, transition: modalTransition },
+  exit: { opacity: 0, scale: 0.95, y: -10, transition: fadeTransition }
+};
+```
+
+### Slide-Up Drawers (Likes, Comments List)
+
+```typescript
+drawerVariants = {
+  initial: { y: "100%" },
+  animate: { y: 0, transition: modalTransition },
+  exit: { y: "100%", transition: fadeTransition }
+};
+```
+
+### Like / Save / Follow Button Animations
+
+**Tap / Toggle:**
+- Scale 1 → 0.85 → 1.05 → 1
+- Quick spring bounce
+
+```typescript
+likeAnimation = {
+  whileTap: { scale: 0.85 },
+  animate: isLiked
+    ? { scale: [1, 1.1, 1], color: "#D9204E" }
+    : { scale: [1, 0.97, 1], color: "#A4A7AE" }
+};
+```
+
+### Animation Implementation Rules
+
+- Every component using animations must import `motion` from Framer Motion
+- Organize variants in a `/src/motion/` folder:
+  - `page.ts`
+  - `modal.ts`
+  - `drawer.ts`
+  - `buttons.ts`
+  - `list.ts`
+  - `profile.ts`
+  - `search.ts`
+  - `comments.ts`
+- Pages must wrap content in `<AnimatePresence>` for transitions
+- Modals/drawers MUST use AnimatePresence for mount/unmount
+- Keep all animations subtle and elegant like the Figma PDF
+
+## Project Structure
+
+Use this folder structure:
+
+```
+src/
+  api/
+  components/
+  context/
+  hooks/
+  pages/
+  router/
+  types/
+  utils/
+  styles/
+  lib/
+  motion/
+```
+
+## Tailwind Setup
+
+Generate `tailwind.config.js` using:
+- Dark mode enabled
+- Extended color palette from the color design system above
+- Custom radii (card, input, pill)
+- Custom shadows (card, glow)
+- Typography scale from the Sociality PDF
+
+## Auth & UI Context
+
+Create:
+- **AuthContext** (token, login(), logout(), isAuthenticated)
+- **UIContext** (drawers, modals, toasts, theme)
+
+### Auth Rules
+- Token persisted in localStorage
+- Redirect user to login if performing private actions while logged-out
+- Include "returnTo" URL
+- Attach Bearer token to all protected endpoints
+
+## API Client (OpenAPI-compliant)
+
+Build a typed API client matching EXACTLY the OpenAPI spec. Full specification: `docs/sociality-coding.json`
+
+**Base URL:** `/` (relative to current domain)  
+**Authentication:** Bearer JWT token (HTTP scheme: `Authorization: Bearer <token>`)
+
+### API Endpoints Reference
+
+#### Auth Endpoints
+
+**POST `/api/auth/register`**
+- **Summary:** Register new user
+- **Request Body (application/json):**
+  - `name` (string, required): "John Doe"
+  - `username` (string, required): "johndoe"
+  - `email` (string, required): "john@email.com"
+  - `phone` (string, optional): "081234567890"
+  - `password` (string, required, minLength: 6): "secret123"
+- **Responses:**
+  - `201`: Registered
+  - `400`: Validation or duplicate error
+
+**POST `/api/auth/login`**
+- **Summary:** Login and get token
+- **Request Body (application/json):**
+  - `email` (string, required): "john@email.com"
+  - `password` (string, required, minLength: 6): "secret123"
+- **Responses:**
+  - `200`: Login success (returns token)
+  - `401`: Invalid credentials
+
+#### My Profile Endpoints
+
+**GET `/api/me`** (Protected)
+- **Summary:** Get my profile + quick stats
+- **Responses:**
+  - `200`: OK (returns profile data with stats)
+
+**PATCH `/api/me`** (Protected)
+- **Summary:** Update my basic profile (supports avatar upload)
+- **Request Body (multipart/form-data OR application/json):**
+  - `name` (string, optional)
+  - `username` (string, optional)
+  - `phone` (string, optional)
+  - `bio` (string, optional)
+  - `avatar` (binary, optional): PNG/JPG/WEBP max 5MB (multipart only)
+  - `avatarUrl` (string, optional): Alternative public URL if not uploading file
+- **Responses:**
+  - `200`: Updated
+  - `400`: Validation / duplicate username
+
+**GET `/api/me/posts`** (Protected)
+- **Summary:** Get posts created by the authenticated user
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+  - `401`: Unauthorized
+
+**GET `/api/me/likes`** (Protected)
+- **Summary:** Get posts I liked
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+
+**GET `/api/me/saved`** (Protected)
+- **Summary:** Get my saved posts
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+
+**GET `/api/me/followers`** (Protected)
+- **Summary:** List my followers
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+
+**GET `/api/me/following`** (Protected)
+- **Summary:** List users I follow
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+
+#### Feed Endpoints
+
+**GET `/api/feed`** (Protected)
+- **Summary:** Timeline posts (self + following)
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+
+#### Posts Endpoints
+
+**POST `/api/posts`** (Protected)
+- **Summary:** Create a post (upload image + caption)
+- **Request Body (multipart/form-data):**
+  - `image` (binary, required): JPG/PNG/WEBP (max 5MB)
+  - `caption` (string, optional): "Hello world!"
+- **Responses:**
+  - `201`: Created
+  - `400`: Bad Request
+  - `401`: Unauthorized
+
+**GET `/api/posts/{id}`** (Public)
+- **Summary:** Get post detail
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Responses:**
+  - `200`: OK
+  - `404`: Not found
+
+**DELETE `/api/posts/{id}`** (Protected)
+- **Summary:** Delete my own post
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Responses:**
+  - `200`: Deleted
+  - `401`: Unauthorized
+  - `403`: Forbidden
+  - `404`: Not found
+
+#### Likes Endpoints
+
+**POST `/api/posts/{id}/like`** (Protected, Idempotent)
+- **Summary:** Like a post
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Responses:**
+  - `200`: Liked
+  - `404`: Post not found
+
+**DELETE `/api/posts/{id}/like`** (Protected, Idempotent)
+- **Summary:** Unlike a post
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Responses:**
+  - `200`: Unliked
+  - `404`: Post not found
+
+**GET `/api/posts/{id}/likes`** (Public, Optional Auth)
+- **Summary:** List users who liked a post
+- **Description:** Public (can be called without token). If Bearer token is sent, response includes `isFollowedByMe`, `isMe`, and `followsMe` flags.
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+  - `404`: Post not found
+
+**GET `/api/users/{username}/likes`** (Public)
+- **Summary:** List posts that this user has liked (public)
+- **Description:** Tab "Liked" in profile. Shows public posts that the user has liked.
+- **Path Parameters:**
+  - `username` (string, required): Username
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+  - `404`: User not found
+
+#### Saves Endpoints
+
+**POST `/api/posts/{id}/save`** (Protected)
+- **Summary:** Save a post (bookmark)
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Responses:**
+  - `200`: Saved
+  - `404`: Post not found
+
+**DELETE `/api/posts/{id}/save`** (Protected)
+- **Summary:** Unsave a post
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Responses:**
+  - `200`: Unsaved
+  - `404`: Post not found
+
+#### Comments Endpoints
+
+**GET `/api/posts/{id}/comments`** (Public)
+- **Summary:** List comments of a post
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 10, maximum: 50)
+- **Responses:**
+  - `200`: OK
+
+**POST `/api/posts/{id}/comments`** (Protected)
+- **Summary:** Add a comment
+- **Path Parameters:**
+  - `id` (integer, required): Post ID
+- **Request Body (application/json):**
+  - `text` (string, required): "Nice post!"
+- **Responses:**
+  - `201`: Comment created
+  - `401`: Unauthorized
+  - `404`: Post not found
+
+**DELETE `/api/comments/{id}`** (Protected)
+- **Summary:** Delete a comment (comment owner or post owner)
+- **Path Parameters:**
+  - `id` (integer, required): Comment ID
+- **Responses:**
+  - `200`: Deleted
+  - `403`: Forbidden
+  - `404`: Not found
+
+#### Follow Endpoints
+
+**POST `/api/follow/{username}`** (Protected, Idempotent)
+- **Summary:** Follow a user by username
+- **Path Parameters:**
+  - `username` (string, required): Username to follow
+- **Responses:**
+  - `200`: Following
+  - `400`: Cannot follow yourself / invalid
+  - `404`: User not found
+
+**DELETE `/api/follow/{username}`** (Protected, Idempotent)
+- **Summary:** Unfollow a user by username
+- **Path Parameters:**
+  - `username` (string, required): Username to unfollow
+- **Responses:**
+  - `200`: Unfollowed
+  - `404`: User not found
+
+**GET `/api/users/{username}/followers`** (Public)
+- **Summary:** List followers of a user (public)
+- **Path Parameters:**
+  - `username` (string, required): Username
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+  - `404`: User not found
+
+**GET `/api/users/{username}/following`** (Public)
+- **Summary:** List users that a user follows (public)
+- **Path Parameters:**
+  - `username` (string, required): Username
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+  - `404`: User not found
+
+#### Users Endpoints
+
+**GET `/api/users/{username}`** (Public)
+- **Summary:** Get public profile by username
+- **Path Parameters:**
+  - `username` (string, required): Username
+- **Responses:**
+  - `200`: OK
+  - `404`: Not found
+
+**GET `/api/users/{username}/posts`** (Public)
+- **Summary:** List posts by username (public)
+- **Path Parameters:**
+  - `username` (string, required): Username
+- **Query Parameters:**
+  - `page` (integer, default: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: OK
+  - `404`: User not found
+
+**GET `/api/users/search`** (Public)
+- **Summary:** Search users by name/username
+- **Query Parameters:**
+  - `q` (string, required, minLength: 1): Keyword for name or username
+  - `page` (integer, default: 1, minimum: 1)
+  - `limit` (integer, default: 20, maximum: 50)
+- **Responses:**
+  - `200`: List users
+
+### API Client Implementation Requirements
+
+- **Axios instance** with base URL configuration
+- **Token injection interceptor** - Automatically add `Authorization: Bearer <token>` header to protected endpoints
+- **File upload helper** - Handle `multipart/form-data` for avatar and post image uploads
+- **Error handling** - Handle 401 (redirect to login), 403, 404, 400 (validation errors)
+- **Response typing** - Type all request/response payloads based on OpenAPI schema
+- **Pagination support** - Handle `page` and `limit` query parameters consistently
+
+### Common Response Patterns
+
+- **Pagination:** All list endpoints support `page` (default: 1) and `limit` (default: 10-20, max: 50)
+- **Idempotent operations:** Like/unlike, follow/unfollow, save/unsave are idempotent (safe to call multiple times)
+- **File uploads:** Use `multipart/form-data` for `/api/posts` and `/api/me` (PATCH with avatar)
+- **Authentication:** Protected endpoints require `Authorization: Bearer <token>` header
+
+## Hooks (React Query)
+
+Generate hooks:
+
+- `useAuth()`
+- `useFeed()`
+- `usePost(id)`
+- `useCreatePost()`
+- `useDeletePost()`
+- `useLike(postId)`
+- `useSave(postId)`
+- `useComments(postId)`
+- `useCreateComment()`
+- `useDeleteComment()`
+- `useFollow(username)`
+- `useSearchUsers()`
+
+All hooks must handle:
+- Loading
+- Empty
+- Error
+- Pagination
+- Infinite scrolling (for feed)
+
+## Component Library (Pixel-Perfect to Figma PDF)
+
+Generate production-quality components, matching the Figma layout:
+
+### Auth
+- `AuthCard`
+- `TextInput`
+- `PasswordInput`
+- `GradientButton`
+
+### Post System
+- `PostCard`
+- `PostAuthorHeader`
+- `PostImage`
+- `PostActions` (like/comment/save/share)
+- `PostCaption` (expandable)
+- `ShowMoreButton`
+
+### Navigation
+- `TopNavBar`
+- `BottomNav` (mobile)
+- `FloatingCreateButton`
+
+### Profile
+- `ProfileHeader`
+- `ProfileStats`
+- `ProfileTabs` (Gallery / Saved / Liked)
+- `EmptyProfileState`
+- `ImageGrid`
+
+### Modals & Drawers
+- `SlideUpDrawer`
+- `PostDetailModal`
+- `CommentList`
+- `CommentItem`
+- `CommentComposer`
+- `LikesDrawer`
+
+### Upload
+- `UploadDropzone`
+- `ImagePreview`
+- `CaptionField`
+
+### Edit Profile
+- `EditProfileForm`
+- `AvatarUpload`
+
+### Search
+- `SearchBar`
+- `SearchResultItem`
+- `EmptySearchState`
+
+## Pages (React Router v7)
+
+### Public Pages
+- `/login`
+- `/register`
+- `/profile/:username`
+- `/users/search`
+- `/posts/:id` (public post detail)
+
+### Private Pages
+- `/feed`
+- `/me` → Overview
+- `/me/posts` → Gallery
+- `/me/likes` → Liked posts
+- `/me/saved` → Saved posts
+- `/me/followers`
+- `/me/following`
+
+### Page Requirements
+
+Page output MUST include:
+- Pixel-perfect layout (Figma PDF)
+- Loading, empty, and error states
+- Pagination or infinite scroll
+- Follow/unfollow button behavior
+- Like/unlike/save/unsave (idempotent)
+- Post creation modal
+- Post deletion confirmation
+
+## Optimistic UI Rules (REQUIRED)
+
+### Like/unlike
+- Immediate toggle → rollback if API fails
+
+### Follow/unfollow
+- Update counts in both profile header and lists
+
+### Save/unsave
+- Update save icon + saved posts page
+
+### Comments
+- Optimistically insert new comment
+- On failure, revert and show toast
+
+## Testing (Optional but generate stubs)
+
+- Vitest for hooks & utils
+- React Testing Library for components
+- Playwright for major flows
+
+## Development Workflow
+
+1. **Folder structure + initial project setup**
+2. **tailwind.config.js** (with color system above)
+3. **src/styles/globals.css**
+4. **AuthContext + UIContext**
+5. **API → hooks → components → pages → router → integration**
+
+All code must be split into real files using Cursor MCP format.
+
+## Package Manager
+
+Use **npm** as the package manager for installing packages in the project.
