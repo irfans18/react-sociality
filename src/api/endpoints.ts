@@ -236,7 +236,7 @@ export const meApi = {
   updateProfile: async (data: FormData | Partial<User>): Promise<Profile> => {
     if (data instanceof FormData) {
       const token = localStorage.getItem('auth_token')
-      const response = await uploadFile('/api/me', data, token || undefined)
+      const response = await uploadFile('/api/me', data, token || undefined, 'PATCH')
       return transformProfile(response)
     } else {
       const response = await apiClient.patch<ApiResponse<Profile>>('/api/me', data)

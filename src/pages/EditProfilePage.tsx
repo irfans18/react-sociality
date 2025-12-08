@@ -25,27 +25,22 @@ export function EditProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isInitialized, setIsInitialized] = useState(false)
 
   // Initialize form data when profile loads
   useEffect(() => {
-    if (profile) {
+    if (profile && !isInitialized) {
       setFormData({
-        name: profile.name ?? '',
-        username: profile.username ?? '',
-        email: profile.email ?? '',
-        phone: profile.phone ?? '',
-        bio: profile.bio ?? '',
+        name: profile.name || '',
+        username: profile.username || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        bio: profile.bio || '',
       })
-      // Set avatar preview from existing avatar URL
-      if (profile.avatar) {
-        setAvatarPreview(profile.avatar)
-      } else {
-        setAvatarPreview(null)
-      }
-      // Reset selected file when profile loads
-      setSelectedFile(null)
+      setAvatarPreview(profile.avatar || null)
+      setIsInitialized(true)
     }
-  }, [profile])
+  }, [profile, isInitialized])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -76,18 +71,24 @@ export function EditProfilePage() {
 
     // Validation
     if (!formData.name.trim()) {
-      setErrors({ name: 'Name is required' })
+      setErrors(prev => ({ ...prev, name: 'Name is required' }))
       return
     }
 
     if (!formData.username.trim()) {
-      setErrors({ username: 'Username is required' })
+      setErrors(prev => ({ ...prev, username: 'Username is required' }))
       return
     }
 
-    // Email validation (optional but if provided, should be valid)
+    // Username validation (alphanumeric and underscores)
+    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      setErrors(prev => ({ ...prev, username: 'Username can only contain letters, numbers, and underscores' }))
+      return
+    }
+
+    // Email validation (if provided)
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setErrors({ email: 'Please enter a valid email address' })
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }))
       return
     }
 
@@ -98,20 +99,20 @@ export function EditProfilePage() {
         formDataToSend.append('avatar', selectedFile)
         formDataToSend.append('name', formData.name.trim())
         formDataToSend.append('username', formData.username.trim())
-        if (formData.email?.trim()) {
-          formDataToSend.append('email', formData.email.trim())
-        }
-        if (formData.phone?.trim()) {
-          formDataToSend.append('phone', formData.phone.trim())
-        }
-        if (formData.bio?.trim()) {
-          formDataToSend.append('bio', formData.bio.trim())
-        }
+        if (formData.email?.trim()) formDataToSend.append('email', formData.email.trim())
+        if (formData.phone?.trim()) formDataToSend.append('phone', formData.phone.trim())
+        if (formData.bio?.trim()) formDataToSend.append('bio', formData.bio.trim())
         
         await updateProfile.mutateAsync(formDataToSend)
       } else {
-        // Update without file - only send fields that have values or were changed
-        const updateData: Record<string, string> = {
+        // Update without file - only send changed fields or all fields
+        const updateData: {
+          name: string
+          username: string
+          email?: string
+          phone?: string
+          bio?: string
+        } = {
           name: formData.name.trim(),
           username: formData.username.trim(),
         }
@@ -129,30 +130,19 @@ export function EditProfilePage() {
         await updateProfile.mutateAsync(updateData)
       }
       
-      // Navigate on success
+      // Navigate back to profile on success
       navigate('/me')
     } catch (error: any) {
       // Handle API errors
-      if (error?.response?.data?.errors) {
-        // Handle validation errors from API
-        const apiErrors = error.response.data.errors
-        const newErrors: Record<string, string> = {}
-        
-        Object.keys(apiErrors).forEach((key) => {
-          if (Array.isArray(apiErrors[key])) {
-            newErrors[key] = apiErrors[key][0]
-          } else {
-            newErrors[key] = apiErrors[key]
-          }
-        })
-        
-        setErrors(newErrors)
-      } else if (error?.response?.data?.message) {
-        // Handle general error message
-        setErrors({ general: error.response.data.message })
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile'
+      const errorFields = error?.response?.data?.errors || {}
+      
+      // Set field-specific errors if provided
+      if (Object.keys(errorFields).length > 0) {
+        setErrors(errorFields)
       } else {
-        // Fallback error
-        setErrors({ general: 'Failed to update profile. Please try again.' })
+        // Set general error
+        setErrors({ _general: errorMessage })
       }
     }
   }
@@ -265,9 +255,9 @@ export function EditProfilePage() {
               )}
             </div>
 
-            {errors.general && (
-              <div className="p-4 bg-neutral-900 border border-accent-red rounded-input">
-                <p className="text-sm text-accent-red">{errors.general}</p>
+            {errors._general && (
+              <div className="p-3 bg-accent-red/10 border border-accent-red rounded-input">
+                <p className="text-sm text-accent-red">{errors._general}</p>
               </div>
             )}
 
