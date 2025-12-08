@@ -30,13 +30,20 @@ export function EditProfilePage() {
   useEffect(() => {
     if (profile) {
       setFormData({
-        name: profile.name || '',
-        username: profile.username || '',
-        email: profile.email || '',
-        phone: profile.phone || '',
-        bio: profile.bio || '',
+        name: profile.name ?? '',
+        username: profile.username ?? '',
+        email: profile.email ?? '',
+        phone: profile.phone ?? '',
+        bio: profile.bio ?? '',
       })
-      setAvatarPreview(profile.avatar || null)
+      // Set avatar preview from existing avatar URL
+      if (profile.avatar) {
+        setAvatarPreview(profile.avatar)
+      } else {
+        setAvatarPreview(null)
+      }
+      // Reset selected file when profile loads
+      setSelectedFile(null)
     }
   }, [profile])
 
@@ -67,6 +74,7 @@ export function EditProfilePage() {
     e.preventDefault()
     setErrors({})
 
+    // Validation
     if (!formData.name.trim()) {
       setErrors({ name: 'Name is required' })
       return
@@ -77,33 +85,75 @@ export function EditProfilePage() {
       return
     }
 
+    // Email validation (optional but if provided, should be valid)
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setErrors({ email: 'Please enter a valid email address' })
+      return
+    }
+
     try {
       if (selectedFile) {
         // Upload with file
         const formDataToSend = new FormData()
         formDataToSend.append('avatar', selectedFile)
-        formDataToSend.append('name', formData.name)
-        formDataToSend.append('username', formData.username)
-        if (formData.email) formDataToSend.append('email', formData.email)
-        if (formData.phone) formDataToSend.append('phone', formData.phone)
-        if (formData.bio) formDataToSend.append('bio', formData.bio)
+        formDataToSend.append('name', formData.name.trim())
+        formDataToSend.append('username', formData.username.trim())
+        if (formData.email?.trim()) {
+          formDataToSend.append('email', formData.email.trim())
+        }
+        if (formData.phone?.trim()) {
+          formDataToSend.append('phone', formData.phone.trim())
+        }
+        if (formData.bio?.trim()) {
+          formDataToSend.append('bio', formData.bio.trim())
+        }
         
         await updateProfile.mutateAsync(formDataToSend)
       } else {
-        // Update without file
-        await updateProfile.mutateAsync({
-          name: formData.name,
-          username: formData.username,
-          email: formData.email || undefined,
-          phone: formData.phone || undefined,
-          bio: formData.bio || undefined,
-        })
+        // Update without file - only send fields that have values or were changed
+        const updateData: Record<string, string> = {
+          name: formData.name.trim(),
+          username: formData.username.trim(),
+        }
+        
+        if (formData.email?.trim()) {
+          updateData.email = formData.email.trim()
+        }
+        if (formData.phone?.trim()) {
+          updateData.phone = formData.phone.trim()
+        }
+        if (formData.bio?.trim()) {
+          updateData.bio = formData.bio.trim()
+        }
+        
+        await updateProfile.mutateAsync(updateData)
       }
       
+      // Navigate on success
       navigate('/me')
-    } catch (error) {
-      // Error handling
-      console.error('Failed to update profile:', error)
+    } catch (error: any) {
+      // Handle API errors
+      if (error?.response?.data?.errors) {
+        // Handle validation errors from API
+        const apiErrors = error.response.data.errors
+        const newErrors: Record<string, string> = {}
+        
+        Object.keys(apiErrors).forEach((key) => {
+          if (Array.isArray(apiErrors[key])) {
+            newErrors[key] = apiErrors[key][0]
+          } else {
+            newErrors[key] = apiErrors[key]
+          }
+        })
+        
+        setErrors(newErrors)
+      } else if (error?.response?.data?.message) {
+        // Handle general error message
+        setErrors({ general: error.response.data.message })
+      } else {
+        // Fallback error
+        setErrors({ general: 'Failed to update profile. Please try again.' })
+      }
     }
   }
 
@@ -214,6 +264,12 @@ export function EditProfilePage() {
                 <p className="mt-1 text-sm text-accent-red">{errors.bio}</p>
               )}
             </div>
+
+            {errors.general && (
+              <div className="p-4 bg-neutral-900 border border-accent-red rounded-input">
+                <p className="text-sm text-accent-red">{errors.general}</p>
+              </div>
+            )}
 
             <div className="pt-4">
               <GradientButton type="submit" isLoading={updateProfile.isPending}>
