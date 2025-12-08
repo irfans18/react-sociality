@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
+import type { AxiosError } from 'axios'
 import { pageVariants } from '@/motion/page'
 import { useMyProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { TopNavBar } from '@/components/navigation/TopNavBar'
 import { BottomNav } from '@/components/navigation/BottomNav'
 import { GradientButton } from '@/components/auth/GradientButton'
 import { TextInput } from '@/components/auth/TextInput'
+import type { ApiError } from '@/types'
 
 export function EditProfilePage() {
   const navigate = useNavigate()
@@ -15,6 +17,7 @@ export function EditProfilePage() {
   const updateProfile = useUpdateProfile()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // Initialize form data from profile
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -22,14 +25,17 @@ export function EditProfilePage() {
     phone: '',
     bio: '',
   })
+  
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isInitialized, setIsInitialized] = useState(false)
+  const initializedProfileId = useRef<number | null>(null)
 
-  // Initialize form data when profile loads
+  // Initialize form data when profile loads (only once per profile ID)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (profile && !isInitialized) {
+    if (profile && profile.id !== initializedProfileId.current && !selectedFile) {
+      initializedProfileId.current = profile.id
       setFormData({
         name: profile.name || '',
         username: profile.username || '',
@@ -37,10 +43,13 @@ export function EditProfilePage() {
         phone: profile.phone || '',
         bio: profile.bio || '',
       })
-      setAvatarPreview(profile.avatar || null)
-      setIsInitialized(true)
+      if (!avatarPreview) {
+        setAvatarPreview(profile.avatar || null)
+      }
     }
-  }, [profile, isInitialized])
+    // Note: We intentionally don't include all dependencies to prevent re-initialization
+    // when user is editing the form
+  }, [profile?.id, selectedFile])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -132,14 +141,27 @@ export function EditProfilePage() {
       
       // Navigate back to profile on success
       navigate('/me')
-    } catch (error: any) {
+    } catch (error) {
       // Handle API errors
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile'
-      const errorFields = error?.response?.data?.errors || {}
+      const axiosError = error as AxiosError<ApiError>
+      const errorMessage = axiosError?.response?.data?.message || axiosError?.message || 'Failed to update profile'
+      const errorFields = axiosError?.response?.data?.errors || {}
+      
+      // Convert errors object from Record<string, string[]> to Record<string, string>
+      const formattedErrors: Record<string, string> = {}
+      if (errorFields && typeof errorFields === 'object') {
+        Object.entries(errorFields).forEach(([key, value]) => {
+          if (Array.isArray(value) && value.length > 0) {
+            formattedErrors[key] = value[0]
+          } else if (typeof value === 'string') {
+            formattedErrors[key] = value
+          }
+        })
+      }
       
       // Set field-specific errors if provided
-      if (Object.keys(errorFields).length > 0) {
-        setErrors(errorFields)
+      if (Object.keys(formattedErrors).length > 0) {
+        setErrors(formattedErrors)
       } else {
         // Set general error
         setErrors({ _general: errorMessage })
