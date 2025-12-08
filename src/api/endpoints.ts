@@ -235,10 +235,14 @@ export const meApi = {
 
   updateProfile: async (data: FormData | Partial<User>): Promise<Profile> => {
     if (data instanceof FormData) {
-      const token = localStorage.getItem('auth_token')
-      const response = await uploadFile('/api/me', data, token || undefined, 'PATCH')
-      return transformProfile(response)
+      // Use PATCH for FormData uploads (profile update with avatar)
+      // Note: axios will automatically set Content-Type to multipart/form-data with boundary
+      // when sending FormData, so we don't manually set it
+      const response = await apiClient.patch<ApiResponse<Profile>>('/api/me', data)
+      const unwrapped = unwrapResponse(response)
+      return transformProfile(unwrapped)
     } else {
+      // Use PATCH for JSON updates (profile update without avatar)
       const response = await apiClient.patch<ApiResponse<Profile>>('/api/me', data)
       const unwrapped = unwrapResponse(response)
       return transformProfile(unwrapped)
