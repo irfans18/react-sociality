@@ -76,7 +76,10 @@ export function MyProfilePage() {
         <div className="px-4 pt-6 md:px-0 md:pt-8">
           <ProfileInfo profile={profile} />
           
-          <ProfileStats profile={profile} />
+          {/* Mobile Stats - Hidden on Desktop (included in ProfileInfo for Desktop) */}
+          <div className="md:hidden">
+            <ProfileStats profile={profile} variant="mobile" />
+          </div>
 
           {/* Tabs */}
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />

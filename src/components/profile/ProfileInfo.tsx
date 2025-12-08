@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
-import { Send } from 'lucide-react'
+import { Send, Settings } from 'lucide-react'
 import type { Profile } from '@/types'
+import { ProfileStats } from './ProfileStats'
 
 interface ProfileInfoProps {
   profile: Profile
@@ -8,37 +9,51 @@ interface ProfileInfoProps {
 
 export function ProfileInfo({ profile }: ProfileInfoProps) {
   return (
-    <div className="flex flex-col gap-6 mb-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4 md:gap-6">
+    <div className="flex flex-col md:flex-row md:items-start md:gap-12 mb-6 md:mb-12">
+      {/* Avatar Section */}
+      <div className="flex-shrink-0 mx-auto md:mx-0 mb-4 md:mb-0">
+        <div className="p-1 rounded-full border-2 border-neutral-800">
           <img
             src={profile.avatar || '/default-avatar.png'}
             alt={profile.name}
-            className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2 border-neutral-900 ring-2 ring-neutral-800"
+            className="w-20 h-20 md:w-36 md:h-36 rounded-full object-cover"
           />
-          <div className="flex flex-col">
-            <h2 className="text-xl md:text-2xl font-bold text-neutral-50">{profile.name}</h2>
-            <p className="text-neutral-400">@{profile.username}</p>
-          </div>
         </div>
       </div>
-      
-      {profile.bio && (
-        <p className="text-neutral-200 text-sm md:text-base leading-relaxed max-w-2xl">
-          {profile.bio}
-        </p>
-      )}
 
-      <div className="flex items-center gap-3">
-        <Link
-          to="/me/edit"
-          className="flex-1 md:flex-none md:w-48 text-center px-4 py-2 border border-neutral-700 bg-transparent text-neutral-50 rounded-pill font-medium hover:bg-neutral-900 transition-colors"
-        >
-          Edit Profile
-        </Link>
-        <button className="p-2 border border-neutral-700 rounded-full text-neutral-400 hover:text-neutral-50 hover:bg-neutral-900 transition-colors">
-          <Send size={20} className="-ml-0.5 mt-0.5" /> {/* Optically center the icon */}
-        </button>
+      {/* Info Section */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Header Row: Username + Actions */}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-4 md:mb-6">
+          <h2 className="text-xl md:text-2xl font-light text-neutral-50">{profile.username}</h2>
+          
+          <div className="flex items-center gap-2">
+            <Link
+              to="/me/edit"
+              className="px-6 py-1.5 bg-neutral-800 text-white rounded-lg font-semibold text-sm hover:bg-neutral-700 transition-colors"
+            >
+              Edit Profile
+            </Link>
+            <button className="p-2 text-white hover:opacity-80 transition-opacity">
+              <Settings size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Stats (Hidden on Mobile) */}
+        <div className="hidden md:block mb-6">
+          <ProfileStats profile={profile} variant="desktop" />
+        </div>
+
+        {/* Name + Bio */}
+        <div className="text-center md:text-left">
+          <div className="font-semibold text-neutral-50 mb-1">{profile.name}</div>
+          {profile.bio && (
+            <p className="text-neutral-300 text-sm md:text-base leading-relaxed whitespace-pre-wrap max-w-2xl">
+              {profile.bio}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
