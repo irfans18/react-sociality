@@ -32,7 +32,6 @@ export function EditProfilePage() {
   const initializedProfileId = useRef<number | null>(null)
 
   // Initialize form data when profile loads (only once per profile ID)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (profile && profile.id !== initializedProfileId.current && !selectedFile) {
       initializedProfileId.current = profile.id
@@ -49,6 +48,7 @@ export function EditProfilePage() {
     }
     // Note: We intentionally don't include all dependencies to prevent re-initialization
     // when user is editing the form
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, selectedFile])
 
   const handleInputChange = (field: string, value: string) => {
