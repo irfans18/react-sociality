@@ -64,6 +64,41 @@ function unwrapResponse<T>(response: { data: ApiResponse<T> | T }): T {
   return response.data as T
 }
 
+// Transform API profile response to match Profile interface
+function transformProfile(apiProfile: any): Profile {
+  if (!apiProfile) {
+    // Return a default empty profile if null/undefined
+    return {
+      id: 0,
+      name: '',
+      username: '',
+      email: '',
+      postsCount: 0,
+      followersCount: 0,
+      followingCount: 0,
+      likesCount: 0,
+    }
+  }
+
+  return {
+    ...apiProfile,
+    id: apiProfile.id,
+    name: apiProfile.name,
+    username: apiProfile.username,
+    email: apiProfile.email,
+    avatar: apiProfile.avatarUrl || apiProfile.avatar,
+    // Handle different casing/naming conventions for stats
+    postsCount: apiProfile.postsCount ?? apiProfile.postCount ?? apiProfile.posts_count ?? 0,
+    followersCount: apiProfile.followersCount ?? apiProfile.followerCount ?? apiProfile.followers_count ?? 0,
+    followingCount: apiProfile.followingCount ?? apiProfile.following_count ?? 0,
+    likesCount: apiProfile.likesCount ?? apiProfile.likeCount ?? apiProfile.likes_count ?? 0,
+    // Ensure booleans
+    isFollowedByMe: !!(apiProfile.isFollowedByMe ?? apiProfile.is_followed_by_me),
+    isMe: !!(apiProfile.isMe ?? apiProfile.is_me),
+    followsMe: !!(apiProfile.followsMe ?? apiProfile.follows_me),
+  }
+}
+
 // Transform API post response to match Post interface
 function transformPost(apiPost: ApiPostResponse): Post {
   return {
@@ -149,16 +184,19 @@ export const authApi = {
 export const meApi = {
   getProfile: async (): Promise<Profile> => {
     const response = await apiClient.get<ApiResponse<Profile>>('/api/me')
-    return unwrapResponse(response)
+    const unwrapped = unwrapResponse(response)
+    return transformProfile(unwrapped)
   },
 
   updateProfile: async (data: FormData | Partial<User>): Promise<Profile> => {
     if (data instanceof FormData) {
       const token = localStorage.getItem('auth_token')
-      return await uploadFile('/api/me', data, token || undefined)
+      const response = await uploadFile('/api/me', data, token || undefined)
+      return transformProfile(response)
     } else {
       const response = await apiClient.patch<ApiResponse<Profile>>('/api/me', data)
-      return unwrapResponse(response)
+      const unwrapped = unwrapResponse(response)
+      return transformProfile(unwrapped)
     }
   },
 
@@ -302,7 +340,8 @@ export const followApi = {
 export const usersApi = {
   getUser: async (username: string): Promise<Profile> => {
     const response = await apiClient.get<ApiResponse<Profile>>(`/api/users/${username}`)
-    return unwrapResponse(response)
+    const unwrapped = unwrapResponse(response)
+    return transformProfile(unwrapped)
   },
 
   getUserPosts: async (username: string, page = 1, limit = 20): Promise<PaginatedResponse<Post>> => {
