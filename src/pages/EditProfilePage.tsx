@@ -12,27 +12,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { z } from 'zod'
-
-// Zod schema for profile edit form
-const profileEditSchema = z.object({
-  name: z.string().min(1, 'Name is required').trim(),
-  username: z
-    .string()
-    .min(1, 'Username is required')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-    .trim(),
-  email: z
-    .string()
-    .email('Please enter a valid email address')
-    .optional()
-    .or(z.literal(''))
-    .transform((val) => (val === '' ? undefined : val)),
-  phone: z.string().optional().or(z.literal('')).transform((val) => (val === '' ? undefined : val)),
-  bio: z.string().optional().or(z.literal('')).transform((val) => (val === '' ? undefined : val)),
-})
-
-type ProfileEditFormData = z.infer<typeof profileEditSchema>
+import { profileEditSchema, type ProfileEditFormInput, type ProfileEditFormData } from '@/lib/validation/profileSchema'
 
 export function EditProfilePage() {
   const navigate = useNavigate()
@@ -43,6 +23,7 @@ export function EditProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
+  const avatarInitialized = useRef(false)
 
   const {
     register,
@@ -50,7 +31,7 @@ export function EditProfilePage() {
     formState: { errors, isSubmitting },
     reset,
     setError,
-  } = useForm<ProfileEditFormData>({
+  } = useForm<ProfileEditFormInput>({
     resolver: zodResolver(profileEditSchema),
     defaultValues: {
       name: '',
@@ -71,9 +52,18 @@ export function EditProfilePage() {
         phone: profile.phone || '',
         bio: profile.bio || '',
       })
-      setAvatarPreview(profile.avatar || null)
     }
   }, [profile, reset])
+
+  // Initialize avatar preview when profile loads (only once)
+  // This is a legitimate use of useEffect to sync external data (API response) with component state
+  // eslint-disable-next-line react-compiler/react-compiler
+  useEffect(() => {
+    if (profile?.avatar && !avatarInitialized.current && !selectedFile) {
+      avatarInitialized.current = true
+      setAvatarPreview(profile.avatar)
+    }
+  }, [profile?.avatar, selectedFile])
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -91,45 +81,33 @@ export function EditProfilePage() {
     fileInputRef.current?.click()
   }
 
-  const onSubmit = async (data: ProfileEditFormData) => {
+  const onSubmit = async (data: ProfileEditFormInput) => {
     setApiError(null)
+
+    // Transform data (empty strings -> undefined)
+    const transformedData: ProfileEditFormData = {
+      name: data.name,
+      username: data.username,
+      email: data.email === '' ? undefined : data.email,
+      phone: data.phone === '' ? undefined : data.phone,
+      bio: data.bio === '' ? undefined : data.bio,
+    }
 
     try {
       if (selectedFile) {
         // Upload with file
         const formDataToSend = new FormData()
         formDataToSend.append('avatar', selectedFile)
-        formDataToSend.append('name', data.name)
-        formDataToSend.append('username', data.username)
-        if (data.email) formDataToSend.append('email', data.email)
-        if (data.phone) formDataToSend.append('phone', data.phone)
-        if (data.bio) formDataToSend.append('bio', data.bio)
+        formDataToSend.append('name', transformedData.name)
+        formDataToSend.append('username', transformedData.username)
+        if (transformedData.email) formDataToSend.append('email', transformedData.email)
+        if (transformedData.phone) formDataToSend.append('phone', transformedData.phone)
+        if (transformedData.bio) formDataToSend.append('bio', transformedData.bio)
         
         await updateProfile.mutateAsync(formDataToSend)
       } else {
         // Update without file
-        const updateData: {
-          name: string
-          username: string
-          email?: string
-          phone?: string
-          bio?: string
-        } = {
-          name: data.name,
-          username: data.username,
-        }
-        
-        if (data.email) {
-          updateData.email = data.email
-        }
-        if (data.phone) {
-          updateData.phone = data.phone
-        }
-        if (data.bio) {
-          updateData.bio = data.bio
-        }
-        
-        await updateProfile.mutateAsync(updateData)
+        await updateProfile.mutateAsync(transformedData)
       }
       
       // Navigate back to profile on success
@@ -144,12 +122,12 @@ export function EditProfilePage() {
       if (errorFields && typeof errorFields === 'object') {
         Object.entries(errorFields).forEach(([key, value]) => {
           if (Array.isArray(value) && value.length > 0) {
-            setError(key as keyof ProfileEditFormData, {
+            setError(key as keyof ProfileEditFormInput, {
               type: 'server',
               message: value[0],
             })
           } else if (typeof value === 'string') {
-            setError(key as keyof ProfileEditFormData, {
+            setError(key as keyof ProfileEditFormInput, {
               type: 'server',
               message: value,
             })
