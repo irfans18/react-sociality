@@ -23,7 +23,7 @@ export function EditProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
-  const profileInitialized = useRef(false)
+  const profileInitialized = useRef<number | null>(null)
 
   const {
     register,
@@ -43,6 +43,7 @@ export function EditProfilePage() {
   })
 
   // Initialize form and avatar when profile loads (only once per profile)
+  // This is a legitimate use of useEffect to sync external data (API response) with component state
   useEffect(() => {
     if (profile && profile.id !== profileInitialized.current) {
       profileInitialized.current = profile.id
@@ -57,7 +58,10 @@ export function EditProfilePage() {
         setAvatarPreview(profile.avatar)
       }
     }
-  }, [profile, reset, selectedFile])
+    // Note: We intentionally don't include all dependencies to prevent re-initialization
+    // when user is editing the form or selecting a new avatar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, selectedFile])
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
