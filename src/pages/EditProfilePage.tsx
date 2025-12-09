@@ -20,10 +20,13 @@ export function EditProfilePage() {
   const updateProfile = useUpdateProfile()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const profileInitialized = useRef<number | null>(null)
+
+  // Compute avatar preview: use selected file preview, otherwise use profile avatar
+  const avatarPreview = avatarPreviewUrl || profile?.avatar || null
 
   const {
     register,
@@ -34,17 +37,18 @@ export function EditProfilePage() {
   } = useForm<ProfileEditFormInput>({
     resolver: zodResolver(profileEditSchema),
     defaultValues: {
-      name: '',
-      username: '',
-      email: '',
-      phone: '',
-      bio: '',
+      name: profile!.name,
+      username: profile!.username,
+      email: profile!.email,
+      phone: profile!.phone,
+      bio: profile?.bio || '',
     },
   })
 
-  // Initialize form and avatar when profile loads (only once per profile)
+  // Initialize form with fetched profile data
   // This is a legitimate use of useEffect to sync external data (API response) with component state
   useEffect(() => {
+    console.log('profile', profile);
     if (profile && profile.id !== profileInitialized.current) {
       profileInitialized.current = profile.id
       reset({
@@ -53,15 +57,11 @@ export function EditProfilePage() {
         email: profile.email || '',
         phone: profile.phone || '',
         bio: profile.bio || '',
+      }, {
+        keepDefaultValues: false,
       })
-      if (profile.avatar && !selectedFile) {
-        setAvatarPreview(profile.avatar)
-      }
     }
-    // Note: We intentionally don't include all dependencies to prevent re-initialization
-    // when user is editing the form or selecting a new avatar
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, selectedFile])
+  }, [profile, reset])
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -69,7 +69,7 @@ export function EditProfilePage() {
       setSelectedFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
-        setAvatarPreview(reader.result as string)
+        setAvatarPreviewUrl(reader.result as string)
       }
       reader.readAsDataURL(file)
     }
@@ -173,7 +173,7 @@ export function EditProfilePage() {
           <div className="flex flex-col items-center md:items-start">
             <div className="relative mb-4">
               <img
-                src={avatarPreview || profile.avatar || '/default-avatar.png'}
+                src={avatarPreview || '/default-avatar.png'}
                 alt={profile.name}
                 className="w-32 h-32 rounded-full object-cover"
               />

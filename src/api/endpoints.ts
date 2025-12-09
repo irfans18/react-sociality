@@ -49,6 +49,27 @@ interface ApiPaginatedResponse {
   }
 }
 
+// API response structure for GET '/api/me'
+// Response: { success: true, message: "OK", data: { profile: {...}, stats: {...} } }
+interface ApiMeResponse {
+  profile: {
+    id: number
+    name: string
+    username: string
+    email: string
+    phone: string | null
+    bio: string | null
+    avatarUrl: string | null
+    createdAt: string
+  }
+  stats: {
+    posts: number
+    followers: number
+    following: number
+    likes: number
+  }
+}
+
 // Helper to unwrap API response
 function unwrapResponse<T>(response: { data: ApiResponse<T> | T }): T {
   // Check if response is wrapped in ApiResponse structure
@@ -65,8 +86,9 @@ function unwrapResponse<T>(response: { data: ApiResponse<T> | T }): T {
 }
 
 // Transform API profile response to match Profile interface
+// Handles both the new nested structure (profile + stats) and legacy flat structure
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformProfile(apiProfile: any): Profile {
+function transformProfile(apiProfile: any, stats?: { posts?: number; followers?: number; following?: number; likes?: number }): Profile {
   if (!apiProfile) {
     // Return a default empty profile if null/undefined
     return {
@@ -81,46 +103,46 @@ function transformProfile(apiProfile: any): Profile {
     }
   }
 
-  // Check if stats are nested in a 'stats' object
-  const stats = apiProfile.stats || {}
+  // Check if stats are provided separately (new nested structure) or nested in the profile object
+  const profileStats = stats || apiProfile.stats || {}
   
   // Extract stats from various possible locations
   const postsCount = 
+    profileStats.posts ??
     apiProfile.postsCount ?? 
     apiProfile.postCount ?? 
     apiProfile.posts_count ?? 
-    stats.postsCount ?? 
-    stats.postCount ?? 
-    stats.posts_count ?? 
-    stats.posts ?? 
+    profileStats.postsCount ?? 
+    profileStats.postCount ?? 
+    profileStats.posts_count ?? 
     0
 
   const followersCount = 
+    profileStats.followers ??
     apiProfile.followersCount ?? 
     apiProfile.followerCount ?? 
     apiProfile.followers_count ?? 
-    stats.followersCount ?? 
-    stats.followerCount ?? 
-    stats.followers_count ?? 
-    stats.followers ?? 
+    profileStats.followersCount ?? 
+    profileStats.followerCount ?? 
+    profileStats.followers_count ?? 
     0
 
   const followingCount = 
+    profileStats.following ??
     apiProfile.followingCount ?? 
     apiProfile.following_count ?? 
-    stats.followingCount ?? 
-    stats.following_count ?? 
-    stats.following ?? 
+    profileStats.followingCount ?? 
+    profileStats.following_count ?? 
     0
 
   const likesCount = 
+    profileStats.likes ??
     apiProfile.likesCount ?? 
     apiProfile.likeCount ?? 
     apiProfile.likes_count ?? 
-    stats.likesCount ?? 
-    stats.likeCount ?? 
-    stats.likes_count ?? 
-    stats.likes ?? 
+    profileStats.likesCount ?? 
+    profileStats.likeCount ?? 
+    profileStats.likes_count ?? 
     0
 
   const transformed = {
@@ -129,7 +151,10 @@ function transformProfile(apiProfile: any): Profile {
     name: apiProfile.name,
     username: apiProfile.username,
     email: apiProfile.email,
-    avatar: apiProfile.avatarUrl || apiProfile.avatar,
+    phone: apiProfile.phone ?? undefined,
+    bio: apiProfile.bio ?? undefined,
+    // Handle avatarUrl (from API) or avatar (legacy), convert null to undefined
+    avatar: apiProfile.avatarUrl ?? apiProfile.avatar ?? undefined,
     // Use extracted stats - ensure they are numbers
     postsCount: typeof postsCount === 'number' ? postsCount : Number(postsCount) || 0,
     followersCount: typeof followersCount === 'number' ? followersCount : Number(followersCount) || 0,
@@ -227,10 +252,38 @@ export const authApi = {
 
 // My Profile endpoints
 export const meApi = {
+  /**
+   * GET '/api/me'
+   * Response structure:
+   * {
+   *   "success": true,
+   *   "message": "OK",
+   *   "data": {
+   *     "profile": {
+   *       "id": number,
+   *       "name": string,
+   *       "username": string,
+   *       "email": string,
+   *       "phone": string | null,
+   *       "bio": string | null,
+   *       "avatarUrl": string | null,
+   *       "createdAt": string
+   *     },
+   *     "stats": {
+   *       "posts": number,
+   *       "followers": number,
+   *       "following": number,
+   *       "likes": number
+   *     }
+   *   }
+   * }
+   */
   getProfile: async (): Promise<Profile> => {
-    const response = await apiClient.get<ApiResponse<Profile>>('/api/me')
-    const unwrapped = unwrapResponse(response)
-    return transformProfile(unwrapped)
+    const response = await apiClient.get<ApiResponse<ApiMeResponse>>('/api/me')
+    const unwrapped = unwrapResponse<ApiMeResponse>(response)
+    // unwrapped contains { profile: {...}, stats: {...} }
+    // Transform the profile and merge stats into a single Profile object
+    return transformProfile(unwrapped.profile, unwrapped.stats)
   },
 
   updateProfile: async (data: FormData | Partial<User>): Promise<Profile> => {

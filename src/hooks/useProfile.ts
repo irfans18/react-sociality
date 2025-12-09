@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { meApi, usersApi } from '@/api/endpoints'
-import type { Profile, Post } from '@/types'
+import type { Profile } from '@/types'
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 
 export function useMyProfile() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ['me'],
     queryFn: () => meApi.getProfile(),
   })

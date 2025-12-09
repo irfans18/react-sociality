@@ -45,8 +45,7 @@ apiClient.interceptors.response.use(
 export const uploadFile = async (
   url: string,
   formData: FormData,
-  token?: string,
-  method: 'POST' | 'PATCH' = 'POST'
+  token?: string
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> => {
   const headers: Record<string, string> = {}
@@ -54,10 +53,7 @@ export const uploadFile = async (
     headers.Authorization = `Bearer ${token}`
   }
 
-  const response = await axios({
-    method,
-    url,
-    data: formData,
+  const response = await axios.post(url, formData, {
     baseURL: API_BASE_URL,
     headers: {
       ...headers,
