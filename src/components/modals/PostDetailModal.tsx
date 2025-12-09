@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, MoreVertical } from 'lucide-react'
+import { PostImageComponent } from '@/components/common/Image'
 import { overlayVariants, modalVariants } from '@/motion/modal'
 import { useUI } from '@/context/UIContext'
 import { usePost } from '@/hooks/usePost'
@@ -69,10 +70,10 @@ export function PostDetailModal() {
                 {isLoading ? (
                   <div className="text-neutral-400">Loading...</div>
                 ) : post?.image ? (
-                  <img
+                  <PostImageComponent
                     src={post.image}
                     alt={post.caption || 'Post image'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
                   />
                 ) : (
                   <div className="text-neutral-400">No image</div>

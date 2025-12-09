@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { pageVariants } from '@/motion/page'
+import { AvatarImage } from '@/components/common/Image'
 import { useSearchUsers } from '@/hooks/useSearchUsers'
 import { TopNavBar } from '@/components/navigation/TopNavBar'
 import { Search } from 'lucide-react'
@@ -48,10 +49,11 @@ export function SearchPage() {
                 to={`/profile/${user.username}`}
                 className="glass-card p-4 flex items-center gap-4 hover:bg-neutral-800/50 transition-colors"
               >
-                <img
-                  src={user.avatar || '/default-avatar.png'}
+                <AvatarImage
+                  src={user.avatar}
                   alt={user.name}
-                  className="w-12 h-12 rounded-full object-cover"
+                  size="md"
+                  className="w-12 h-12"
                 />
                 <div>
                   <p className="font-semibold text-neutral-50">{user.name}</p>

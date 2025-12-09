@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { Image } from '@/components/common/Image'
 
 interface ImagePreviewProps {
   file: File | string
@@ -15,10 +16,11 @@ export function ImagePreview({ file, onRemove }: ImagePreviewProps) {
       animate={{ opacity: 1, scale: 1 }}
       className="relative w-full aspect-square rounded-lg overflow-hidden bg-neutral-900"
     >
-      <img
+      <Image
         src={imageUrl}
         alt="Preview"
         className="w-full h-full object-cover"
+        showSkeleton={false}
       />
       <button
         onClick={onRemove}

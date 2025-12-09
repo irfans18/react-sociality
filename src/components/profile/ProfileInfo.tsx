@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Settings } from 'lucide-react'
+import { AvatarImage } from '@/components/common/Image'
 import type { Profile } from '@/types'
 import { ProfileStats } from './ProfileStats'
 
@@ -13,10 +14,11 @@ export function ProfileInfo({ profile }: ProfileInfoProps) {
       {/* Avatar Section */}
       <div className="shrink-0 mx-auto md:mx-0 mb-4 md:mb-0">
         <div className="p-1 rounded-full border-2 border-neutral-800">
-          <img
-            src={profile.avatar || '/default-avatar.png'}
+          <AvatarImage
+            src={profile.avatar}
             alt={profile.name}
-            className="w-20 h-20 md:w-36 md:h-36 rounded-full object-cover"
+            size="lg"
+            className="md:w-36 md:h-36"
           />
         </div>
       </div>

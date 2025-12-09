@@ -104,10 +104,13 @@ function transformProfile(apiProfile: any, stats?: { posts?: number; followers?:
   }
 
   // Check if stats are provided separately (new nested structure) or nested in the profile object
-  const profileStats = stats || apiProfile.stats || {}
+  // Also check for 'counts' object structure from /api/users/:username endpoint
+  const profileStats = stats || apiProfile.stats || apiProfile.counts || {}
   
   // Extract stats from various possible locations
+  // Priority: counts object > stats object > direct properties
   const postsCount = 
+    profileStats.post ??
     profileStats.posts ??
     apiProfile.postsCount ?? 
     apiProfile.postCount ?? 
@@ -161,7 +164,8 @@ function transformProfile(apiProfile: any, stats?: { posts?: number; followers?:
     followingCount: typeof followingCount === 'number' ? followingCount : Number(followingCount) || 0,
     likesCount: typeof likesCount === 'number' ? likesCount : Number(likesCount) || 0,
     // Ensure booleans
-    isFollowedByMe: !!(apiProfile.isFollowedByMe ?? apiProfile.is_followed_by_me),
+    // Map isFollowing (from /api/users/:username) to isFollowedByMe
+    isFollowedByMe: !!(apiProfile.isFollowing ?? apiProfile.isFollowedByMe ?? apiProfile.is_followed_by_me),
     isMe: !!(apiProfile.isMe ?? apiProfile.is_me),
     followsMe: !!(apiProfile.followsMe ?? apiProfile.follows_me),
   }
@@ -477,9 +481,41 @@ export const usersApi = {
   },
 
   searchUsers: async (q: string, page = 1, limit = 20): Promise<PaginatedResponse<User>> => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<User>>>('/api/users/search', {
+    interface ApiSearchUser {
+      id: number
+      username: string
+      name: string
+      avatarUrl: string | null
+      isFollowedByMe?: boolean
+    }
+    interface ApiSearchResponse {
+      users: ApiSearchUser[]
+      pagination: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+      }
+    }
+    const response = await apiClient.get<ApiResponse<ApiSearchResponse>>('/api/users/search', {
       params: { q, page, limit },
     })
-    return unwrapResponse(response)
+    const unwrapped = unwrapResponse(response)
+    // Transform from { users: [...], pagination: {...} } to PaginatedResponse<User>
+    // Map avatarUrl to avatar and handle null values
+    return {
+      data: (unwrapped.users || []).map((user) => ({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: '', // Search API doesn't return email
+        avatar: user.avatarUrl || undefined,
+        isFollowedByMe: user.isFollowedByMe,
+      })),
+      page: unwrapped.pagination.page,
+      limit: unwrapped.pagination.limit,
+      total: unwrapped.pagination.total,
+      totalPages: unwrapped.pagination.totalPages,
+    }
   },
 }

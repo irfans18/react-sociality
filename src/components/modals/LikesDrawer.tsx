@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { likesApi } from '@/api/endpoints'
+import { AvatarImage } from '@/components/common/Image'
 import { SlideUpDrawer } from './SlideUpDrawer'
 import { useUI } from '@/context/UIContext'
 import { Link } from 'react-router-dom'
@@ -33,10 +34,10 @@ export function LikesDrawer() {
               onClick={() => setLikesDrawerOpen(false)}
               className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-800 transition-colors"
             >
-              <img
-                src={user.avatar || '/default-avatar.png'}
+              <AvatarImage
+                src={user.avatar}
                 alt={user.name}
-                className="w-10 h-10 rounded-full object-cover"
+                size="md"
               />
               <div>
                 <p className="font-semibold text-neutral-50">{user.name}</p>

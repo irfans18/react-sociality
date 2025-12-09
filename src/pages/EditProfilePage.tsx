@@ -1,5 +1,6 @@
 import { GradientButton } from '@/components/auth/GradientButton'
 import { TextInput } from '@/components/auth/TextInput'
+import { AvatarImage } from '@/components/common/Image'
 import { BottomNav } from '@/components/navigation/BottomNav'
 import { TopNavBar } from '@/components/navigation/TopNavBar'
 import { useMyProfile, useUpdateProfile } from '@/hooks/useProfile'
@@ -172,10 +173,11 @@ export function EditProfilePage() {
           {/* Left Column - Avatar */}
           <div className="flex flex-col items-center md:items-start">
             <div className="relative mb-4">
-              <img
-                src={avatarPreview || '/default-avatar.png'}
+              <AvatarImage
+                src={avatarPreview || profile.avatar}
                 alt={profile.name}
-                className="w-32 h-32 rounded-full object-cover"
+                size="lg"
+                className="w-32 h-32"
               />
               <input
                 ref={fileInputRef}

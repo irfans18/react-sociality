@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { AvatarImage } from '@/components/common/Image'
 import type { Profile } from '@/types'
 
 interface ProfileHeaderProps {
@@ -21,10 +22,10 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
           </button>
           <h1 className="text-xl font-bold text-neutral-50">{profile.name}</h1>
         </div>
-        <img
-          src={profile.avatar || '/default-avatar.png'}
+        <AvatarImage
+          src={profile.avatar}
           alt={profile.name}
-          className="w-8 h-8 rounded-full object-cover border border-neutral-800"
+          size="sm"
         />
       </div>
     </div>

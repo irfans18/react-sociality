@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { Trash2 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { AvatarImage } from '@/components/common/Image'
 import { commentItemVariants } from '@/motion/comments'
 import { useDeleteComment } from '@/hooks/useComments'
 import { useAuth } from '@/context/AuthContext'
@@ -26,10 +27,10 @@ export function CommentItem({ comment }: CommentItemProps) {
       variants={commentItemVariants}
       className="flex gap-3"
     >
-      <img
-        src={comment.author.avatar || '/default-avatar.png'}
+      <AvatarImage
+        src={comment.author.avatar}
         alt={comment.author.name}
-        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        size="sm"
       />
       <div className="flex-1">
         <div className="flex items-start justify-between gap-2">

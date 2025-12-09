@@ -5,6 +5,7 @@ import { pageVariants } from '@/motion/page'
 import { useUserProfile, useUserPosts, useUserLikes } from '@/hooks/useProfile'
 import { useFollow } from '@/hooks/useFollow'
 import { useAuth } from '@/context/AuthContext'
+import { AvatarImage } from '@/components/common/Image'
 import { TopNavBar } from '@/components/navigation/TopNavBar'
 import { BottomNav } from '@/components/navigation/BottomNav'
 import { PostCard } from '@/components/post/PostCard'
@@ -18,7 +19,8 @@ export function ProfilePage() {
   const { user: currentUser } = useAuth()
   const [activeTab, setActiveTab] = useState<'posts' | 'likes'>('posts')
 
-  const isOwnProfile = currentUser?.username === username
+  // Use isMe from API response if available, otherwise fallback to username comparison
+  const isOwnProfile = profile?.isMe ?? (currentUser?.username === username)
   const posts = activeTab === 'posts' ? (postsData?.data || []) : (likesData?.data || [])
 
   if (isLoading) {
@@ -50,10 +52,11 @@ export function ProfilePage() {
         {/* Profile Header */}
         <div className="glass-card p-6 mb-4">
           <div className="flex items-start gap-6">
-            <img
-              src={profile.avatar || '/default-avatar.png'}
+            <AvatarImage
+              src={profile.avatar}
               alt={profile.name}
-              className="w-24 h-24 rounded-full object-cover"
+              size="lg"
+              className="w-24 h-24"
             />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-4">

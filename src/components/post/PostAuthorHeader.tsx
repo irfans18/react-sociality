@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
+import { AvatarImage } from '@/components/common/Image'
 import type { User } from '@/types'
 
 interface PostAuthorHeaderProps {
@@ -11,10 +12,10 @@ export function PostAuthorHeader({ author, createdAt }: PostAuthorHeaderProps) {
 
   return (
     <div className="flex items-center gap-3 mb-4">
-      <img
-        src={author.avatar || '/default-avatar.png'}
+      <AvatarImage
+        src={author.avatar}
         alt={author.name}
-        className="w-10 h-10 rounded-full object-cover"
+        size="md"
       />
       <div className="flex-1">
         <p className="font-semibold text-neutral-50">{author.name}</p>
