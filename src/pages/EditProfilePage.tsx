@@ -23,7 +23,7 @@ export function EditProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
-  const avatarInitialized = useRef(false)
+  const profileInitialized = useRef(false)
 
   const {
     register,
@@ -42,9 +42,10 @@ export function EditProfilePage() {
     },
   })
 
-  // Initialize form when profile loads
+  // Initialize form and avatar when profile loads (only once per profile)
   useEffect(() => {
-    if (profile) {
+    if (profile && profile.id !== profileInitialized.current) {
+      profileInitialized.current = profile.id
       reset({
         name: profile.name || '',
         username: profile.username || '',
@@ -52,18 +53,11 @@ export function EditProfilePage() {
         phone: profile.phone || '',
         bio: profile.bio || '',
       })
+      if (profile.avatar && !selectedFile) {
+        setAvatarPreview(profile.avatar)
+      }
     }
-  }, [profile, reset])
-
-  // Initialize avatar preview when profile loads (only once)
-  // This is a legitimate use of useEffect to sync external data (API response) with component state
-  // eslint-disable-next-line react-compiler/react-compiler
-  useEffect(() => {
-    if (profile?.avatar && !avatarInitialized.current && !selectedFile) {
-      avatarInitialized.current = true
-      setAvatarPreview(profile.avatar)
-    }
-  }, [profile?.avatar, selectedFile])
+  }, [profile, reset, selectedFile])
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
