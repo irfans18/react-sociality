@@ -1,15 +1,38 @@
-import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
-import type { AxiosError } from 'axios'
-import { pageVariants } from '@/motion/page'
-import { useMyProfile, useUpdateProfile } from '@/hooks/useProfile'
-import { TopNavBar } from '@/components/navigation/TopNavBar'
-import { BottomNav } from '@/components/navigation/BottomNav'
 import { GradientButton } from '@/components/auth/GradientButton'
 import { TextInput } from '@/components/auth/TextInput'
+import { BottomNav } from '@/components/navigation/BottomNav'
+import { TopNavBar } from '@/components/navigation/TopNavBar'
+import { useMyProfile, useUpdateProfile } from '@/hooks/useProfile'
+import { pageVariants } from '@/motion/page'
 import type { ApiError } from '@/types'
+import type { AxiosError } from 'axios'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { motion } from 'framer-motion'
+import { ArrowLeft } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
+import { z } from 'zod'
+
+// Zod schema for profile edit form
+const profileEditSchema = z.object({
+  name: z.string().min(1, 'Name is required').trim(),
+  username: z
+    .string()
+    .min(1, 'Username is required')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+    .trim(),
+  email: z
+    .string()
+    .email('Please enter a valid email address')
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' ? undefined : val)),
+  phone: z.string().optional().or(z.literal('')).transform((val) => (val === '' ? undefined : val)),
+  bio: z.string().optional().or(z.literal('')).transform((val) => (val === '' ? undefined : val)),
+})
+
+type ProfileEditFormData = z.infer<typeof profileEditSchema>
 
 export function EditProfilePage() {
   const navigate = useNavigate()
@@ -17,46 +40,40 @@ export function EditProfilePage() {
   const updateProfile = useUpdateProfile()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Initialize form data from profile
-  const [formData, setFormData] = useState({
-    name: '',
-    username: '',
-    email: '',
-    phone: '',
-    bio: '',
-  })
-  
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const initializedProfileId = useRef<number | null>(null)
+  const [apiError, setApiError] = useState<string | null>(null)
 
-  // Initialize form data when profile loads (only once per profile ID)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setError,
+  } = useForm<ProfileEditFormData>({
+    resolver: zodResolver(profileEditSchema),
+    defaultValues: {
+      name: '',
+      username: '',
+      email: '',
+      phone: '',
+      bio: '',
+    },
+  })
+
+  // Initialize form when profile loads
   useEffect(() => {
-    if (profile && profile.id !== initializedProfileId.current && !selectedFile) {
-      initializedProfileId.current = profile.id
-      setFormData({
+    if (profile) {
+      reset({
         name: profile.name || '',
         username: profile.username || '',
         email: profile.email || '',
         phone: profile.phone || '',
         bio: profile.bio || '',
       })
-      if (!avatarPreview) {
-        setAvatarPreview(profile.avatar || null)
-      }
+      setAvatarPreview(profile.avatar || null)
     }
-    // Note: We intentionally don't include all dependencies to prevent re-initialization
-    // when user is editing the form
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, selectedFile])
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
-  }
+  }, [profile, reset])
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -74,47 +91,23 @@ export function EditProfilePage() {
     fileInputRef.current?.click()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrors({})
-
-    // Validation
-    if (!formData.name.trim()) {
-      setErrors(prev => ({ ...prev, name: 'Name is required' }))
-      return
-    }
-
-    if (!formData.username.trim()) {
-      setErrors(prev => ({ ...prev, username: 'Username is required' }))
-      return
-    }
-
-    // Username validation (alphanumeric and underscores)
-    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      setErrors(prev => ({ ...prev, username: 'Username can only contain letters, numbers, and underscores' }))
-      return
-    }
-
-    // Email validation (if provided)
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }))
-      return
-    }
+  const onSubmit = async (data: ProfileEditFormData) => {
+    setApiError(null)
 
     try {
       if (selectedFile) {
         // Upload with file
         const formDataToSend = new FormData()
         formDataToSend.append('avatar', selectedFile)
-        formDataToSend.append('name', formData.name.trim())
-        formDataToSend.append('username', formData.username.trim())
-        if (formData.email?.trim()) formDataToSend.append('email', formData.email.trim())
-        if (formData.phone?.trim()) formDataToSend.append('phone', formData.phone.trim())
-        if (formData.bio?.trim()) formDataToSend.append('bio', formData.bio.trim())
+        formDataToSend.append('name', data.name)
+        formDataToSend.append('username', data.username)
+        if (data.email) formDataToSend.append('email', data.email)
+        if (data.phone) formDataToSend.append('phone', data.phone)
+        if (data.bio) formDataToSend.append('bio', data.bio)
         
         await updateProfile.mutateAsync(formDataToSend)
       } else {
-        // Update without file - only send changed fields or all fields
+        // Update without file
         const updateData: {
           name: string
           username: string
@@ -122,18 +115,18 @@ export function EditProfilePage() {
           phone?: string
           bio?: string
         } = {
-          name: formData.name.trim(),
-          username: formData.username.trim(),
+          name: data.name,
+          username: data.username,
         }
         
-        if (formData.email?.trim()) {
-          updateData.email = formData.email.trim()
+        if (data.email) {
+          updateData.email = data.email
         }
-        if (formData.phone?.trim()) {
-          updateData.phone = formData.phone.trim()
+        if (data.phone) {
+          updateData.phone = data.phone
         }
-        if (formData.bio?.trim()) {
-          updateData.bio = formData.bio.trim()
+        if (data.bio) {
+          updateData.bio = data.bio
         }
         
         await updateProfile.mutateAsync(updateData)
@@ -147,24 +140,24 @@ export function EditProfilePage() {
       const errorMessage = axiosError?.response?.data?.message || axiosError?.message || 'Failed to update profile'
       const errorFields = axiosError?.response?.data?.errors || {}
       
-      // Convert errors object from Record<string, string[]> to Record<string, string>
-      const formattedErrors: Record<string, string> = {}
+      // Set field-specific errors if provided
       if (errorFields && typeof errorFields === 'object') {
         Object.entries(errorFields).forEach(([key, value]) => {
           if (Array.isArray(value) && value.length > 0) {
-            formattedErrors[key] = value[0]
+            setError(key as keyof ProfileEditFormData, {
+              type: 'server',
+              message: value[0],
+            })
           } else if (typeof value === 'string') {
-            formattedErrors[key] = value
+            setError(key as keyof ProfileEditFormData, {
+              type: 'server',
+              message: value,
+            })
           }
         })
-      }
-      
-      // Set field-specific errors if provided
-      if (Object.keys(formattedErrors).length > 0) {
-        setErrors(formattedErrors)
       } else {
         // Set general error
-        setErrors({ _general: errorMessage })
+        setApiError(errorMessage)
       }
     }
   }
@@ -199,7 +192,7 @@ export function EditProfilePage() {
           <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col md:flex-row gap-8">
           {/* Left Column - Avatar */}
           <div className="flex flex-col items-center md:items-start">
             <div className="relative mb-4">
@@ -229,35 +222,31 @@ export function EditProfilePage() {
           <div className="flex-1 space-y-6">
             <TextInput
               label="Name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              error={errors.name}
+              {...register('name')}
+              error={errors.name?.message}
               placeholder="Enter your name"
             />
             
             <TextInput
               label="Username"
-              value={formData.username}
-              onChange={(e) => handleInputChange('username', e.target.value)}
-              error={errors.username}
+              {...register('username')}
+              error={errors.username?.message}
               placeholder="Enter your username"
             />
             
             <TextInput
               label="Email"
               type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              error={errors.email}
+              {...register('email')}
+              error={errors.email?.message}
               placeholder="Enter your email"
             />
             
             <TextInput
               label="Number Phone"
               type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              error={errors.phone}
+              {...register('phone')}
+              error={errors.phone?.message}
               placeholder="Enter your phone number"
             />
             
@@ -266,25 +255,24 @@ export function EditProfilePage() {
                 Bio
               </label>
               <textarea
-                value={formData.bio}
-                onChange={(e) => handleInputChange('bio', e.target.value)}
+                {...register('bio')}
                 rows={4}
                 className="input-base w-full px-4 py-3 text-white placeholder:text-neutral-400 resize-none"
                 placeholder="Tell us about yourself..."
               />
               {errors.bio && (
-                <p className="mt-1 text-sm text-accent-red">{errors.bio}</p>
+                <p className="mt-1 text-sm text-accent-red">{errors.bio.message}</p>
               )}
             </div>
 
-            {errors._general && (
+            {apiError && (
               <div className="p-3 bg-accent-red/10 border border-accent-red rounded-input">
-                <p className="text-sm text-accent-red">{errors._general}</p>
+                <p className="text-sm text-accent-red">{apiError}</p>
               </div>
             )}
 
             <div className="pt-4">
-              <GradientButton type="submit" isLoading={updateProfile.isPending}>
+              <GradientButton type="submit" isLoading={isSubmitting || updateProfile.isPending}>
                 Save Changes
               </GradientButton>
             </div>
